@@ -7,7 +7,7 @@
 # Only the Xcode Command Line Tools are required (clang and swiftc); neither
 # Xcode nor root privileges are needed to build, install or run.
 
-VERSION       := 1.0.0
+VERSION       := 1.1.0
 BUNDLE_ID     := io.github.edisonwh6.LunLink
 DEPLOY_TARGET := 13.0
 

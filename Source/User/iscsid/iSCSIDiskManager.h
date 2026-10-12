@@ -62,11 +62,14 @@ void iSCSIDiskManagerRelease(iSCSIDiskManagerRef manager);
  *  @param targetIQN the name of the target (used to name the disks).
  *  @param readOnly attach the disks read-only, even if the logical units
  *  can be written to.
+ *  @param syncWrites put every write on stable storage before it is
+ *  acknowledged, rather than a moment later (see iSCSILogicalUnit.h).
  *  @return an error code indicating the result of the operation. */
 errno_t iSCSIDiskManagerAttachSession(iSCSIDiskManagerRef manager,
                                       SessionIdentifier sessionId,
                                       CFStringRef targetIQN,
-                                      bool readOnly);
+                                      bool readOnly,
+                                      bool syncWrites);
 
 /*! Unmounts the volumes of the disks of a session and detaches the disks.
  *  @param manager the disk manager.

@@ -663,6 +663,9 @@ static errno_t CommandModifyTarget(const struct Arguments * arguments)
         if(GetEnableOption(arguments,"read-only",&enable,&invalid))
             iSCSIPreferencesSetReadOnlyForTarget(preferences,targetIQN,enable);
 
+        if(GetEnableOption(arguments,"sync-writes",&enable,&invalid))
+            iSCSIPreferencesSetSyncWritesForTarget(preferences,targetIQN,enable);
+
         if(invalid)
             return EINVAL;
 
@@ -858,6 +861,7 @@ static errno_t CommandListTargetConfig(const struct Arguments * arguments)
     Print(CFSTR("\t\tAuto-login: %s\n"),iSCSIPreferencesGetAutoLoginForTarget(preferences,targetIQN) ? "enabled" : "disabled");
     Print(CFSTR("\t\tPersistent: %s\n"),iSCSIPreferencesGetPersistenceForTarget(preferences,targetIQN) ? "enabled" : "disabled");
     Print(CFSTR("\t\tRead-only: %s\n"),iSCSIPreferencesGetReadOnlyForTarget(preferences,targetIQN) ? "enabled" : "disabled");
+    Print(CFSTR("\t\tFlush after every write: %s\n"),iSCSIPreferencesGetSyncWritesForTarget(preferences,targetIQN) ? "enabled" : "disabled");
     Print(CFSTR("\t\tHeaderDigest: %s\n"),DigestName(iSCSIPreferencesGetHeaderDigestForTarget(preferences,targetIQN)));
     Print(CFSTR("\t\tDataDigest: %s\n"),DigestName(iSCSIPreferencesGetDataDigestForTarget(preferences,targetIQN)));
 

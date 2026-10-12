@@ -48,6 +48,8 @@ struct TargetDetailView: View {
                 Toggle("Connect automatically", isOn: setting(\.autoLogin, "AutoLogin"))
                 Toggle("Attach disks read-only", isOn: setting(\.readOnly, "ReadOnly"))
                     .disabled(target.connected)
+                Toggle("Flush after every write", isOn: setting(\.syncWrites, "SyncWrites"))
+                    .disabled(target.connected)
                 Toggle("Verify headers (CRC32C)", isOn: setting(\.headerDigest, "HeaderDigest"))
                     .disabled(target.connected)
                 Toggle("Verify data (CRC32C)", isOn: setting(\.dataDigest, "DataDigest"))
@@ -55,12 +57,16 @@ struct TargetDetailView: View {
             } header: {
                 Text("Options")
             } footer: {
-                if target.connected {
-                    Text("Some options can only be changed while the target is disconnected.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Writes are normally confirmed at once and stored by the server a moment later, which is fast. Flushing after every write is much slower, and only matters if the server loses power or the daemon is cut short.")
+
+                    if target.connected {
+                        Text("Some options can only be changed while the target is disconnected.")
+                    }
                 }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             AuthenticationSection(target: target)

@@ -1185,6 +1185,34 @@ void iSCSIPreferencesSetInitiatorAuthenticationMethodForTarget(iSCSIPreferencesR
  *  @param targetIQN the target iSCSI qualified name (IQN).
  *  @return the authentication method, or kiSCSIAuthMethodInvalid if none
  *  was set for the target (the general configuration applies). */
+/*! Preference key name for flushing the cache of a target after every write. */
+CFStringRef kiSCSIPKSyncWrites = CFSTR("Synchronous Writes");
+
+/*! Sets whether every write to the disks of the specified target is put on
+ *  stable storage before it is acknowledged (see iSCSILogicalUnit.h).
+ *  @param preferences an iSCSI preferences object.
+ *  @param targetIQN the target iSCSI qualified name (IQN).
+ *  @param syncWrites true to flush after every write. */
+void iSCSIPreferencesSetSyncWritesForTarget(iSCSIPreferencesRef preferences,
+                                            CFStringRef targetIQN,
+                                            Boolean syncWrites)
+{
+    CFMutableDictionaryRef targetDict = iSCSIPreferencesGetTargetDict(preferences,targetIQN,true);
+    CFDictionarySetValue(targetDict,kiSCSIPKSyncWrites,syncWrites ? kCFBooleanTrue : kCFBooleanFalse);
+}
+
+/*! Gets whether every write to the disks of the specified target is put on
+ *  stable storage before it is acknowledged.
+ *  @param preferences an iSCSI preferences object.
+ *  @param targetIQN the target iSCSI qualified name (IQN).
+ *  @return true if every write is followed by a flush. */
+Boolean iSCSIPreferencesGetSyncWritesForTarget(iSCSIPreferencesRef preferences,
+                                               CFStringRef targetIQN)
+{
+    CFMutableDictionaryRef targetDict = iSCSIPreferencesGetTargetDict(preferences,targetIQN,false);
+    return targetDict && CFDictionaryGetValue(targetDict,kiSCSIPKSyncWrites) == kCFBooleanTrue;
+}
+
 enum iSCSIAuthMethods iSCSIPreferencesGetInitiatorAuthenticationMethodForTarget(iSCSIPreferencesRef preferences,
                                                                                 CFStringRef targetIQN)
 {

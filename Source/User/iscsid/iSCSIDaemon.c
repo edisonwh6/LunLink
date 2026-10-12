@@ -597,7 +597,8 @@ static errno_t iSCSIDLoginTarget(CFStringRef targetIQN,
 
         // Attach the logical units of the target as disks
         errno_t attachError = iSCSIDiskManagerAttachSession(diskManager,sessionId,targetIQN,
-                                                            iSCSIPreferencesGetReadOnlyForTarget(preferences,targetIQN));
+                                                            iSCSIPreferencesGetReadOnlyForTarget(preferences,targetIQN),
+                                                            iSCSIPreferencesGetSyncWritesForTarget(preferences,targetIQN));
 
         if(attachError)
             iSCSIDLog(kiSCSILogError,CFSTR("unable to attach the disks of %@: %s"),targetIQN,strerror(attachError));

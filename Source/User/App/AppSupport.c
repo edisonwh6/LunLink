@@ -138,6 +138,7 @@ static CFMutableDictionaryRef CreateTargetSnapshot(iSCSIDaemonHandle handle,
     SetBool(snapshot,CFSTR("AutoLogin"),iSCSIPreferencesGetAutoLoginForTarget(preferences,targetIQN));
     SetBool(snapshot,CFSTR("Persistent"),iSCSIPreferencesGetPersistenceForTarget(preferences,targetIQN));
     SetBool(snapshot,CFSTR("ReadOnly"),iSCSIPreferencesGetReadOnlyForTarget(preferences,targetIQN));
+    SetBool(snapshot,CFSTR("SyncWrites"),iSCSIPreferencesGetSyncWritesForTarget(preferences,targetIQN));
     SetBool(snapshot,CFSTR("HeaderDigest"),iSCSIPreferencesGetHeaderDigestForTarget(preferences,targetIQN) == kiSCSIDigestCRC32C);
     SetBool(snapshot,CFSTR("DataDigest"),iSCSIPreferencesGetDataDigestForTarget(preferences,targetIQN) == kiSCSIDigestCRC32C);
 
@@ -499,6 +500,9 @@ int iSCSIAppUpdateTarget(iSCSIDaemonHandle handle,CFStringRef targetIQN,CFDictio
 
         if(GetBool(settings,CFSTR("ReadOnly"),&value))
             iSCSIPreferencesSetReadOnlyForTarget(preferences,targetIQN,value);
+
+        if(GetBool(settings,CFSTR("SyncWrites"),&value))
+            iSCSIPreferencesSetSyncWritesForTarget(preferences,targetIQN,value);
 
         if(GetBool(settings,CFSTR("HeaderDigest"),&value))
             iSCSIPreferencesSetHeaderDigestForTarget(preferences,targetIQN,value ? kiSCSIDigestCRC32C : kiSCSIDigestNone);

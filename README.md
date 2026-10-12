@@ -43,7 +43,7 @@ To remove the application run `make uninstall`. Your configuration is kept; the 
 4. A disk that is new can be formatted right there (**Format…**), or in Disk Utility.
 5. Click **Disconnect** before you shut down the server or leave its network (you are asked to confirm). Volumes are unmounted first; if one of them is in use you are told so.
 
-Per target you can choose to connect automatically, to attach its disks read-only and to verify headers and data with CRC32C digests. In *Settings* you find the initiator name of your Mac (which servers may use to grant access), default CHAP credentials, periodic discovery and the option to start the daemon when you log in, which is what connects targets automatically.
+Per target you can choose to connect automatically, to attach its disks read-only, to flush after every write (see [How it works](#how-it-works)) and to verify headers and data with CRC32C digests. In *Settings* you find the initiator name of your Mac (which servers may use to grant access), default CHAP credentials, periodic discovery and the option to start the daemon when you log in, which is what connects targets automatically.
 
 The application comes in English and Simplified Chinese. It follows the language of the system; *Settings → General → Language* chooses one regardless (the application restarts to change, which leaves targets connected).
 
@@ -94,7 +94,7 @@ macOS offers no supported way for user-space code to provide a block device, and
 
 When a connection is lost, I/O is suspended while the daemon re-establishes the session (for up to two minutes), then resumes where it left off; volumes stay mounted throughout. This is also what happens when the Mac wakes from sleep and finds that the target has dropped the session. If the session cannot be recovered its disks are detached.
 
-Writes are durable when acknowledged: the system issues writes to such disks synchronously, and the daemon passes that on (with the force-unit-access bit, or by flushing the write cache of the logical unit if it does not support that bit).
+Writes are fast rather than cautious by default. The system hands the daemon one small write at a time and waits for each; over a network that would be painfully slow, and a flush of the server's write cache after each would make it slower still. So the daemon confirms a write as soon as it has queued it (at most 8 MiB are in the queue), sends the queue to the target several writes at a time, and has the target flush its cache a quarter of a second after data was written, as well as before a target is disconnected and before the Mac sleeps. What this risks is the last moments' writes, should the server lose power or the daemon be cut short at that very time, which can leave a file system in need of repair. A target whose data must not run that risk can be set to **flush after every write** (`-sync-writes enable`): every write is then on stable storage before it is confirmed, at a fraction of the speed.
 
 ## Limitations
 
@@ -102,7 +102,7 @@ Writes are durable when acknowledged: the system issues writes to such disks syn
 * CHAP uses MD5, as nearly all initiators and targets do.
 * Disks are presented with 512-byte blocks. Logical units with other block sizes work, but volumes created on them here may not be recognized by other initiators (the daemon logs a warning).
 * Space that file systems free up is not reported to the target (no UNMAP).
-* The data path crosses user space twice, so throughput is below that of a kernel driver. Against a Linux-based NAS on a local network, sequential reads were measured at roughly 200–280 MB/s and (synchronous) writes at about 100 MB/s.
+* The data path crosses user space twice, so throughput is below that of a kernel driver. Over a simulated 2.5 Gb/s link with a round trip of 0.9 ms, a single stream reads and writes sequentially at about 200 MB/s, and reads 4 KiB at random about 750 times a second; a real server adds its own share to that. Requests of a few kilobytes cost one round trip to the server each.
 * Sessions belong to a user and exist while that user is logged in. An iSCSI disk cannot be a startup disk, and other users of the Mac do not see it.
 * The system shows the disks as disk images (which is what they are, as far as it can tell).
 * If the daemon is killed, its disks disappear without being unmounted, like a drive that is unplugged. The next start of the daemon cleans up what was left behind.
@@ -111,7 +111,7 @@ Writes are durable when acknowledged: the system issues writes to such disks syn
 
 * The kernel extension, the Xcode project and the installer package are gone. So are the requirement for root privileges and the authorization prompts.
 * The configuration moved from `/Library/Preferences` to the preferences of the user, and CHAP secrets from the system keychain to the login keychain. Existing configurations are not migrated.
-* `iscsictl` keeps its syntax. New: `discover`, `daemon`, `logout -force`, and the target options `-read-only`, `-initiator-authentication`, `-initiator-CHAP-name` and `-initiator-CHAP-secret`, which set CHAP credentials per target (the credentials of `initiator-config` remain the default). `-MaxConnections` and `-ErrorRecoveryLevel` only accept the values that are supported.
+* `iscsictl` keeps its syntax. New: `discover`, `daemon`, `logout -force`, and the target options `-read-only`, `-initiator-authentication`, `-sync-writes`, `-initiator-CHAP-name` and `-initiator-CHAP-secret`, the last three of which set CHAP credentials per target (the credentials of `initiator-config` remain the default). `-MaxConnections` and `-ErrorRecoveryLevel` only accept the values that are supported.
 * Initiator names are derived from the identifier of the host by default, since two initiators of the same name evict each other's sessions.
 
 ## Testing

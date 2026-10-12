@@ -71,6 +71,20 @@ enum {
     kSenseAbortedCommand = 0xb
 };
 
+/*! Number of threads that write queued data to a unit.  Writes that are on
+ *  their way at the same time wait for the target at the same time. */
+#define kWriterCount 16
+
+/*! A write that was acknowledged and is on its way to the unit. */
+struct PendingWrite {
+    struct PendingWrite * next;
+    UInt64 block;
+    UInt32 blockCount;
+    UInt64 sequence;
+    bool started;
+    UInt8 * data;
+};
+
 struct __iSCSILogicalUnit {
     iSCSIHBAInterfaceRef interface;
     SessionIdentifier sessionId;
@@ -96,7 +110,43 @@ struct __iSCSILogicalUnit {
     /*! Serializes writes that are not aligned to the block size (these have
      *  to read, modify and write back whole blocks). */
     pthread_mutex_t unalignedLock;
+
+    // With deferred flushing (see iSCSILogicalUnitSetDeferredFlush) a write
+    // is acknowledged as soon as it is queued here.  Writer threads carry
+    // the queue to the unit, several writes at a time, and a flusher thread
+    // has the unit flush its cache shortly after.  flushLock guards it all.
+    bool deferredFlush;
+    bool dirty;
+    bool flusherStop;
+    bool writersStop;
+
+    /*! Queued writes are not to wait for a session that is being recovered
+     *  (the unit is about to go). */
+    bool abandon;
+
+    /*! A queued write failed: writes are refused from then on. */
+    int writeError;
+
+    /*! The queued writes, in order of arrival. */
+    struct PendingWrite * pending;
+    UInt64 pendingBytes;
+    UInt64 writeSequence;
+
+    pthread_t flusher;
+    pthread_t writers[kWriterCount];
+    pthread_cond_t flusherCond;     // there is something to flush
+    pthread_cond_t writerCond;      // there is something to write
+    pthread_cond_t drainCond;       // a queued write is done with
 };
+
+/*! How long written data may sit in the cache of a unit before the cache is
+ *  flushed, when flushing is deferred. */
+static const long kDeferredFlushDelayMs = 250;
+
+/*! How much data may be queued for a unit, acknowledged yet not written.
+ *  Enough to keep the connection busy, and no more: it is what is lost if
+ *  the daemon comes to a sudden end. */
+static const UInt64 kWriteBehindLimit = 8u << 20;
 
 static inline void Put16(UInt8 * bytes,UInt16 value)
 {
@@ -301,6 +351,9 @@ static iSCSILogicalUnitRef LogicalUnitCreate(iSCSIHBAInterfaceRef interface,
     pthread_mutex_init(&unit->unalignedLock,NULL);
     pthread_mutex_init(&unit->flushLock,NULL);
     pthread_cond_init(&unit->flushCond,NULL);
+    pthread_cond_init(&unit->flusherCond,NULL);
+    pthread_cond_init(&unit->writerCond,NULL);
+    pthread_cond_init(&unit->drainCond,NULL);
 
     // Decode the logical unit number (peripheral or flat addressing)
     UInt8 first = (UInt8)(LUN >> 56), second = (UInt8)(LUN >> 48);
@@ -469,11 +522,264 @@ errno_t iSCSILogicalUnitScan(iSCSIHBAInterfaceRef interface,
     return 0;
 }
 
+static int LogicalUnitTransfer(iSCSILogicalUnitRef unit,bool write,UInt64 block,UInt32 blockCount,
+                               void * buffer,bool forceUnitAccess);
+
+/*! Whether a queued write touches a range of blocks (flushLock is held). */
+static bool LogicalUnitPendingOverlaps(iSCSILogicalUnitRef unit,UInt64 block,UInt64 blockCount)
+{
+    for(struct PendingWrite * write = unit->pending; write; write = write->next)
+        if(block < write->block + write->blockCount && write->block < block + blockCount)
+            return true;
+
+    return false;
+}
+
+/*! Waits for the queued writes that touch a range of blocks, so that what
+ *  is read (or written in their place) comes after them. */
+static void LogicalUnitAwaitRange(iSCSILogicalUnitRef unit,UInt64 block,UInt64 blockCount)
+{
+    if(!unit->deferredFlush)
+        return;
+
+    pthread_mutex_lock(&unit->flushLock);
+
+    while(LogicalUnitPendingOverlaps(unit,block,blockCount))
+        pthread_cond_wait(&unit->drainCond,&unit->flushLock);
+
+    pthread_mutex_unlock(&unit->flushLock);
+}
+
+/*! Waits until all that is queued at this moment has been written.
+ *  @return the error of a queued write that failed, if any. */
+static int LogicalUnitDrain(iSCSILogicalUnitRef unit)
+{
+    pthread_mutex_lock(&unit->flushLock);
+    UInt64 sequence = unit->writeSequence;
+
+    for(;;) {
+        bool outstanding = false;
+
+        for(struct PendingWrite * write = unit->pending; write && !outstanding; write = write->next)
+            outstanding = (write->sequence <= sequence);
+
+        if(!outstanding)
+            break;
+
+        pthread_cond_wait(&unit->drainCond,&unit->flushLock);
+    }
+
+    int error = unit->writeError;
+    pthread_mutex_unlock(&unit->flushLock);
+    return error;
+}
+
+/*! Queues a write of whole blocks and returns at once.  Writes that overlap
+ *  are kept in order: a write waits for those in its way to be done. */
+static int LogicalUnitQueueWrite(iSCSILogicalUnitRef unit,UInt64 block,UInt32 blockCount,const void * buffer)
+{
+    size_t length = (size_t)blockCount * unit->info.blockSize;
+    struct PendingWrite * write = calloc(1,sizeof(struct PendingWrite));
+    UInt8 * data = malloc(length);
+
+    if(!write || !data) {
+        free(write);
+        free(data);
+        return ENOMEM;
+    }
+
+    memcpy(data,buffer,length);
+    write->block = block;
+    write->blockCount = blockCount;
+    write->data = data;
+
+    pthread_mutex_lock(&unit->flushLock);
+
+    while(!unit->writeError &&
+          ((unit->pending && unit->pendingBytes + length > kWriteBehindLimit) ||
+           LogicalUnitPendingOverlaps(unit,block,blockCount)))
+        pthread_cond_wait(&unit->drainCond,&unit->flushLock);
+
+    if(unit->writeError) {
+        int error = unit->writeError;
+        pthread_mutex_unlock(&unit->flushLock);
+        free(write);
+        free(data);
+        return error;
+    }
+
+    struct PendingWrite ** tail = &unit->pending;
+
+    while(*tail)
+        tail = &(*tail)->next;
+
+    *tail = write;
+    write->sequence = ++unit->writeSequence;
+    unit->pendingBytes += length;
+
+    if(!unit->dirty) {
+        unit->dirty = true;
+        pthread_cond_signal(&unit->flusherCond);
+    }
+    pthread_cond_signal(&unit->writerCond);
+    pthread_mutex_unlock(&unit->flushLock);
+    return 0;
+}
+
+/*! Carries queued writes to the unit. */
+static void * LogicalUnitWriterMain(void * context)
+{
+    iSCSILogicalUnitRef unit = context;
+    pthread_setname_np("iscsid.write");
+
+    pthread_mutex_lock(&unit->flushLock);
+
+    for(;;) {
+        struct PendingWrite * write = unit->pending;
+
+        while(write && write->started)
+            write = write->next;
+
+        if(!write) {
+            if(unit->writersStop)
+                break;
+
+            pthread_cond_wait(&unit->writerCond,&unit->flushLock);
+            continue;
+        }
+
+        write->started = true;
+        pthread_mutex_unlock(&unit->flushLock);
+
+        int error;
+
+        for(;;) {
+            error = LogicalUnitTransfer(unit,true,write->block,write->blockCount,write->data,false);
+
+            // The session is being recovered: the write is repeated, the
+            // way the system would repeat one that it was told to try later
+            if(error != kiSCSIBlockExportErrorTryLater || unit->abandon)
+                break;
+
+            usleep(200 * 1000);
+        }
+
+        pthread_mutex_lock(&unit->flushLock);
+
+        struct PendingWrite ** link = &unit->pending;
+
+        while(*link != write)
+            link = &(*link)->next;
+
+        *link = write->next;
+        unit->pendingBytes -= (UInt64)write->blockCount * unit->info.blockSize;
+
+        if(error && !unit->writeError) {
+            unit->writeError = (error > 0) ? error : EIO;
+            iSCSILogError("a write to LUN %u that was acknowledged in advance has failed: %s (sid %u)",
+                          unit->info.number,strerror(unit->writeError),unit->sessionId);
+        }
+
+        pthread_cond_broadcast(&unit->drainCond);
+        free(write->data);
+        free(write);
+    }
+
+    pthread_mutex_unlock(&unit->flushLock);
+    return NULL;
+}
+
+/*! Flushes the cache of a unit some time after data was written to it. */
+static void * LogicalUnitFlusherMain(void * context)
+{
+    iSCSILogicalUnitRef unit = context;
+    pthread_setname_np("iscsid.flush");
+
+    pthread_mutex_lock(&unit->flushLock);
+
+    while(!unit->flusherStop) {
+        if(!unit->dirty) {
+            pthread_cond_wait(&unit->flusherCond,&unit->flushLock);
+            continue;
+        }
+
+        // Writes are left to gather for a while: one flush covers them all
+        struct timespec delay = { kDeferredFlushDelayMs / 1000, (kDeferredFlushDelayMs % 1000) * 1000000L };
+        pthread_cond_timedwait_relative_np(&unit->flusherCond,&unit->flushLock,&delay);
+
+        unit->dirty = false;
+        pthread_mutex_unlock(&unit->flushLock);
+
+        int error = iSCSILogicalUnitFlush(unit);
+
+        pthread_mutex_lock(&unit->flushLock);
+
+        // The session may be down for the moment: try again in a while
+        if(error && !unit->flusherStop && !unit->writeError) {
+            unit->dirty = true;
+            struct timespec pause = { 1, 0 };
+            pthread_cond_timedwait_relative_np(&unit->flusherCond,&unit->flushLock,&pause);
+        }
+    }
+
+    pthread_mutex_unlock(&unit->flushLock);
+
+    // Nothing is to stay behind, neither in the queue nor in the cache
+    iSCSILogicalUnitFlush(unit);
+    return NULL;
+}
+
+void iSCSILogicalUnitSetDeferredFlush(iSCSILogicalUnitRef unit,bool enable)
+{
+    if(!unit || unit->deferredFlush == enable)
+        return;
+
+    if(enable) {
+        if(unit->info.readOnly)
+            return;
+
+        unit->flusherStop = unit->writersStop = false;
+
+        if(pthread_create(&unit->flusher,NULL,LogicalUnitFlusherMain,unit) != 0)
+            return;
+
+        for(int index = 0; index < kWriterCount; index++)
+            pthread_create(&unit->writers[index],NULL,LogicalUnitWriterMain,unit);
+
+        unit->deferredFlush = true;
+    }
+    else {
+        // The flusher writes out and flushes what there is before it ends
+        pthread_mutex_lock(&unit->flushLock);
+        unit->flusherStop = true;
+        pthread_cond_broadcast(&unit->flusherCond);
+        pthread_mutex_unlock(&unit->flushLock);
+        pthread_join(unit->flusher,NULL);
+
+        pthread_mutex_lock(&unit->flushLock);
+        unit->writersStop = true;
+        pthread_cond_broadcast(&unit->writerCond);
+        pthread_mutex_unlock(&unit->flushLock);
+
+        for(int index = 0; index < kWriterCount; index++)
+            pthread_join(unit->writers[index],NULL);
+
+        unit->deferredFlush = false;
+    }
+}
+
 void iSCSILogicalUnitRelease(iSCSILogicalUnitRef unit)
 {
     if(!unit)
         return;
 
+    // (A unit that goes does not wait for its session to come back)
+    unit->abandon = true;
+    iSCSILogicalUnitSetDeferredFlush(unit,false);
+
+    pthread_cond_destroy(&unit->flusherCond);
+    pthread_cond_destroy(&unit->writerCond);
+    pthread_cond_destroy(&unit->drainCond);
     pthread_mutex_destroy(&unit->unalignedLock);
     pthread_mutex_destroy(&unit->flushLock);
     pthread_cond_destroy(&unit->flushCond);
@@ -595,6 +901,8 @@ int iSCSILogicalUnitRead(iSCSILogicalUnitRef unit,UInt64 offset,UInt32 length,vo
 
     UInt32 blockSize = unit->info.blockSize;
 
+    LogicalUnitAwaitRange(unit,offset / blockSize,(offset + length - 1) / blockSize - offset / blockSize + 1);
+
     if(offset % blockSize == 0 && length % blockSize == 0)
         return LogicalUnitTransfer(unit,false,offset / blockSize,length / blockSize,buffer,false);
 
@@ -629,10 +937,25 @@ int iSCSILogicalUnitWrite(iSCSILogicalUnitRef unit,UInt64 offset,UInt32 length,c
 
     UInt32 blockSize = unit->info.blockSize;
 
+    // With deferred flushing the write is queued, and that is that
+    if(unit->deferredFlush) {
+        if(offset % blockSize == 0 && length % blockSize == 0)
+            return LogicalUnitQueueWrite(unit,offset / blockSize,length / blockSize,buffer);
+
+        // (A write that is not aligned to blocks reads blocks first, which
+        // have to be up to date)
+        int queueError = LogicalUnitDrain(unit);
+
+        if(queueError)
+            return queueError;
+    }
+
     // Synchronous writes bypass the write cache where the unit allows it;
-    // otherwise the cache is flushed after the write
-    bool forceUnitAccess = sync && unit->info.writeCache && unit->info.forceUnitAccess;
-    bool flushAfter = sync && unit->info.writeCache && !unit->info.forceUnitAccess;
+    // otherwise the cache is flushed after the write.  If flushing is
+    // deferred, the write goes to the cache and the flusher sees to the rest.
+    bool immediate = sync && !unit->deferredFlush;
+    bool forceUnitAccess = immediate && unit->info.writeCache && unit->info.forceUnitAccess;
+    bool flushAfter = immediate && unit->info.writeCache && !unit->info.forceUnitAccess;
     int error;
 
     if(offset % blockSize == 0 && length % blockSize == 0)
@@ -667,6 +990,15 @@ int iSCSILogicalUnitWrite(iSCSILogicalUnitRef unit,UInt64 offset,UInt32 length,c
     if(!error && flushAfter)
         error = LogicalUnitFlushShared(unit);
 
+    if(!error && unit->deferredFlush) {
+        pthread_mutex_lock(&unit->flushLock);
+
+        if(!unit->dirty) {
+            unit->dirty = true;
+            pthread_cond_signal(&unit->flusherCond);
+        }
+        pthread_mutex_unlock(&unit->flushLock);
+    }
     return error;
 }
 
@@ -674,6 +1006,13 @@ int iSCSILogicalUnitFlush(iSCSILogicalUnitRef unit)
 {
     if(!unit)
         return EINVAL;
+
+    if(unit->deferredFlush) {
+        int queueError = LogicalUnitDrain(unit);
+
+        if(queueError)
+            return queueError;
+    }
 
     if(unit->info.readOnly || !unit->info.writeCache || unit->flushUnsupported)
         return 0;

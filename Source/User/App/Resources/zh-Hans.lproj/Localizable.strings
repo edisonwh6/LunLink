@@ -53,6 +53,8 @@
 "Options" = "选项";
 "Connect automatically" = "自动连接";
 "Attach disks read-only" = "以只读方式挂接磁盘";
+"Flush after every write" = "每次写入后立即落盘";
+"Writes are normally confirmed at once and stored by the server a moment later, which is fast. Flushing after every write is much slower, and only matters if the server loses power or the daemon is cut short." = "默认情况下，写入会立即确认，服务器稍后再落盘，速度快。“每次写入后立即落盘”要慢得多，只在服务器断电或守护进程被强行结束时才有区别。";
 "Verify headers (CRC32C)" = "校验报文头 (CRC32C)";
 "Verify data (CRC32C)" = "校验数据 (CRC32C)";
 "Some options can only be changed while the target is disconnected." = "部分选项只能在目标断开时更改。";

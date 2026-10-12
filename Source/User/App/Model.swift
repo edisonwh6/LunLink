@@ -111,6 +111,7 @@ struct Target: Identifiable, Hashable {
     var autoLogin: Bool
     var persistent: Bool
     var readOnly: Bool
+    var syncWrites: Bool
     var headerDigest: Bool
     var dataDigest: Bool
     var initiatorAuth: InitiatorAuth
@@ -146,6 +147,7 @@ struct Target: Identifiable, Hashable {
         autoLogin = dictionary["AutoLogin"] as? Bool ?? false
         persistent = dictionary["Persistent"] as? Bool ?? false
         readOnly = dictionary["ReadOnly"] as? Bool ?? false
+        syncWrites = dictionary["SyncWrites"] as? Bool ?? false
         headerDigest = dictionary["HeaderDigest"] as? Bool ?? false
         dataDigest = dictionary["DataDigest"] as? Bool ?? false
         initiatorAuth = InitiatorAuth(rawValue: dictionary["InitiatorAuth"] as? String ?? "") ?? .inherit

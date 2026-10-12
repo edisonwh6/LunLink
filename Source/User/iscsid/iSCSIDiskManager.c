@@ -621,9 +621,14 @@ static bool ExportMount(iSCSIDiskManagerRef manager)
     char options[PATH_MAX + 256];
     char source[PATH_MAX + 64];
 
+    // The size of read and write requests is the unit in which the client
+    // caches the files, that is, the disks: a read of a few kilobytes
+    // fetches a whole unit, and a request that is not aligned to units
+    // (none is: partitions start where they please) fetches one more.  A
+    // small unit wastes little, and the client asks for many at a time.
     snprintf(options,sizeof(options),
              "vers=3,proto=ticotsord,mountport=%s,locallocks,nobrowse,noquota,nonegnamecache,"
-             "intr,rwsize=1048576,retrycnt=0,deadtimeout=45",manager->socketPath);
+             "intr,rwsize=65536,retrycnt=0,deadtimeout=45",manager->socketPath);
 
     snprintf(source,sizeof(source),"<%s>:%s",manager->socketPath,
              iSCSIBlockExportGetExportPath(manager->exportRef));
@@ -827,7 +832,8 @@ void iSCSIDiskManagerRelease(iSCSIDiskManagerRef manager)
 errno_t iSCSIDiskManagerAttachSession(iSCSIDiskManagerRef manager,
                                       SessionIdentifier sessionId,
                                       CFStringRef targetIQN,
-                                      bool readOnly)
+                                      bool readOnly,
+                                      bool syncWrites)
 {
     if(!manager || !targetIQN)
         return EINVAL;
@@ -840,6 +846,9 @@ errno_t iSCSIDiskManagerAttachSession(iSCSIDiskManagerRef manager,
         iSCSILogError("unable to scan for logical units (sid %u): %s",sessionId,strerror(error));
         return error;
     }
+
+    for(UInt32 index = 0; index < unitCount; index++)
+        iSCSILogicalUnitSetDeferredFlush(units[index],!syncWrites && !readOnly);
 
     // Derive a file name for the disks of this target; only characters that
     // are unproblematic in file names are kept

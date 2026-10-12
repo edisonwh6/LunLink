@@ -163,6 +163,14 @@ Whether the daemon keeps trying to log in to the target again after its
 session was lost for good.
 .It Fl read-only Ar enable | disable
 Whether the disks of the target are attached read-only.
+.It Fl sync-writes Ar enable | disable
+Whether every write is put on stable storage before it is acknowledged.
+By default a write is acknowledged as soon as it is queued, and the target is
+told to flush its write cache a quarter of a second later, which is many
+times faster.
+What it costs: the last moments' writes are lost if the target loses power,
+or the daemon is cut short, at that very time.
+The option takes effect the next time the target is logged in to.
 .It Fl HeaderDigest Ar digest
 The header digest to ask for: None or CRC32C.
 .It Fl DataDigest Ar digest

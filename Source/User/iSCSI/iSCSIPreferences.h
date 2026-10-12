@@ -289,6 +289,23 @@ void iSCSIPreferencesSetReadOnlyForTarget(iSCSIPreferencesRef preferences,
 Boolean iSCSIPreferencesGetReadOnlyForTarget(iSCSIPreferencesRef preferences,
                                              CFStringRef targetIQN);
 
+/*! Sets whether every write to the disks of the specified target is put on
+ *  stable storage before it is acknowledged, rather than a moment later.
+ *  @param preferences an iSCSI preferences object.
+ *  @param targetIQN the target iSCSI qualified name (IQN).
+ *  @param syncWrites true to flush after every write. */
+void iSCSIPreferencesSetSyncWritesForTarget(iSCSIPreferencesRef preferences,
+                                            CFStringRef targetIQN,
+                                            Boolean syncWrites);
+
+/*! Gets whether every write to the disks of the specified target is put on
+ *  stable storage before it is acknowledged.
+ *  @param preferences an iSCSI preferences object.
+ *  @param targetIQN the target iSCSI qualified name (IQN).
+ *  @return true if every write is followed by a flush. */
+Boolean iSCSIPreferencesGetSyncWritesForTarget(iSCSIPreferencesRef preferences,
+                                               CFStringRef targetIQN);
+
 /*! Sets the method by which the initiator authenticates itself to the
  *  specified target, which takes precedence over the method configured for
  *  the initiator in general.

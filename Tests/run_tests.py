@@ -16,6 +16,7 @@ user.  Disks do get attached to the system for real, which is the point.
 import hashlib
 import os
 import plistlib
+import random
 import re
 import signal
 import subprocess
@@ -420,12 +421,59 @@ class NegotiationTests(InitiatorTestCase):
         self.run_with(options=("-HeaderDigest", "CRC32C", "-DataDigest", "CRC32C"),
                       header_digest=False, data_digest=False, sizes=(4096, 65536))
 
-    def test_write_cache_without_fua(self):
-        """Writes to a unit that cannot bypass its cache are followed by a flush."""
+    def test_write_cache_is_flushed(self):
+        """What was written is flushed from the cache of the unit, a moment
+        after the writes rather than after each of them."""
         target = self.run_with(fua=False)
         self.assertEqual(target.fua_writes, 0)
         self.assertGreater(target.flushes, 0)
+        self.assertLess(target.flushes, target.writes)
+
+    def test_sync_writes_bypass_the_cache(self):
+        """On request every write is on stable storage when it returns."""
+        target = self.run_with(options=("-sync-writes", "enable"))
+        self.assertGreater(target.fua_writes, 0)
+        self.assertEqual(target.fua_writes, target.writes)
+
+    def test_sync_writes_without_fua(self):
+        """... which takes a flush per write if the unit cannot bypass its cache."""
+        target = self.run_with(fua=False, options=("-sync-writes", "enable"))
+        self.assertEqual(target.fua_writes, 0)
+        self.assertGreater(target.flushes, 0)
         self.assertLessEqual(target.flushes, target.writes)
+
+    def test_queued_writes_keep_their_order(self):
+        """Writes are acknowledged before they reach the target.  Those that
+        overlap have to arrive in the order in which they were made, a read
+        has to see what was written before it, and all of it has to be at
+        the target once the target is logged out of."""
+        target = self.make_target()
+        disks = self.login(target)
+        base, region = 2 * MiB, 4 * MiB
+        model = bytearray(region)
+        generator = random.Random(5)
+
+        with RawDisk(disks[0]) as disk:
+            disk.write(base, bytes(model))
+
+            for step in range(400):
+                size = generator.choice((512, 4096, 65536, 200 * 1024))
+                offset = generator.randrange(0, (region - size) // 512) * 512
+
+                if step % 4 == 3:
+                    self.assertEqual(disk.read(base + offset, size), bytes(model[offset:offset + size]),
+                                     f"step {step}: a read did not see what was written before it")
+                else:
+                    data = os.urandom(size)
+                    disk.write(base + offset, data)
+                    model[offset:offset + size] = data
+
+            self.assertEqual(disk.read(base, region), bytes(model))
+
+        self.logout(target)
+        self.assertEqual(self.backing(target, base, region), bytes(model))
+        self.assertGreater(target.flushes, 0)
+        self.assertEqual(target.protocol_errors, [])
 
     def test_no_write_cache(self):
         """A unit without a write cache needs neither."""
@@ -683,15 +731,18 @@ class FileSystemTests(InitiatorTestCase):
     def test_hfs_volume_survives_logout_and_login(self):
         self.check_volume("JHFS+")
 
+    def test_volume_with_sync_writes(self):
+        self.check_volume("JHFS+", sync_writes=True)
+
     def test_apfs_volume_survives_logout_and_login(self):
         self.check_volume("APFS", size=256 * MiB)
 
     def test_exfat_volume_survives_logout_and_login(self):
         self.check_volume("ExFAT")
 
-    def check_volume(self, file_system, size=96 * MiB):
+    def check_volume(self, file_system, size=96 * MiB, sync_writes=False):
         target = self.make_target(lun_sizes=[size])
-        disks = self.login(target)
+        disks = self.login(target, "-sync-writes", "enable") if sync_writes else self.login(target)
 
         result = subprocess.run(["diskutil", "eraseDisk", file_system, "iSCSITest", "GPT", f"/dev/{disks[0]}"],
                                 capture_output=True, text=True)
@@ -716,9 +767,14 @@ class FileSystemTests(InitiatorTestCase):
         self.logout(target)
         self.assertFalse(os.path.exists(mount_point))
 
-        # What the file system wrote was made to bypass the write cache
-        self.assertGreater(target.fua_writes, 0)
-        self.assertEqual(target.fua_writes, target.writes)
+        if sync_writes:
+            # What the file system wrote was made to bypass the write cache
+            self.assertGreater(target.fua_writes, 0)
+            self.assertEqual(target.fua_writes, target.writes)
+        else:
+            # ... or was flushed from it before the target was let go
+            self.assertEqual(target.fua_writes, 0)
+            self.assertGreater(target.flushes, 0)
 
         # The volume is mounted again when the target is logged in to
         ctl("login", target.config.name, check=True)

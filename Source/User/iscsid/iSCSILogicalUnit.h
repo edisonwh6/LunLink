@@ -81,6 +81,16 @@ errno_t iSCSILogicalUnitScan(iSCSIHBAInterfaceRef interface,
 
 void iSCSILogicalUnitRelease(iSCSILogicalUnitRef unit);
 
+/*! Chooses when data that is written to a unit with a write cache reaches
+ *  stable storage.  By default every write is on stable storage when it
+ *  returns.  With deferred flushing a write returns as soon as the unit has
+ *  the data in its cache, which is flushed a moment later: much faster, at
+ *  the price that the last moments' writes are lost if the unit loses power
+ *  just then (the initiator crashing does no harm).
+ *  @param unit the logical unit.
+ *  @param enable true to defer flushing. */
+void iSCSILogicalUnitSetDeferredFlush(iSCSILogicalUnitRef unit,bool enable);
+
 const iSCSILogicalUnitInfo * iSCSILogicalUnitGetInfo(iSCSILogicalUnitRef unit);
 
 /*! Reads from a logical unit.  Offset and length are in bytes and need not
