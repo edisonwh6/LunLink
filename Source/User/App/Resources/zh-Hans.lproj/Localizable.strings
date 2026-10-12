@@ -1,0 +1,185 @@
+/* Simplified Chinese localization of LunLink. The keys are the
+   English strings of the user interface. */
+
+/* Main window */
+"LunLink" = "LunLink";
+"Targets" = "目标";
+"Add Target" = "添加目标";
+"Add Target…" = "添加目标…";
+"Add a target" = "添加目标";
+"Refresh" = "刷新";
+"No Targets" = "尚无目标";
+"No Target Selected" = "未选择目标";
+"Add an iSCSI target to use its disks on this Mac." = "添加一个 iSCSI 目标，即可在这台 Mac 上使用它提供的磁盘。";
+"Connect" = "连接";
+"Disconnect" = "断开连接";
+"Disconnect Anyway" = "仍要断开";
+"Disconnect Anyway…" = "强制断开…";
+"Copy Name" = "拷贝名称";
+"Remove" = "移除";
+"Remove…" = "移除…";
+"Remove Target…" = "移除目标…";
+"More actions" = "更多操作";
+"OK" = "好";
+"Cancel" = "取消";
+"Save" = "存储";
+"Add" = "添加";
+"Start" = "启动";
+"Stop" = "停止";
+"Quit" = "退出";
+"Open LunLink" = "打开 LunLink";
+
+/* Status */
+"Connected" = "已连接";
+"Not connected" = "未连接";
+"Connecting…" = "正在连接…";
+"Disconnecting…" = "正在断开…";
+"Reconnecting…" = "正在重新连接…";
+"Connection lost — reconnecting…" = "连接已中断，正在重新连接…";
+"Connected · 1 disk" = "已连接 · 1 个磁盘";
+"Connected · %lld disks" = "已连接 · %lld 个磁盘";
+"Starting…" = "正在启动…";
+"Daemon running" = "守护进程运行中";
+"Daemon not running" = "守护进程未运行";
+
+/* Target details */
+"Disks" = "磁盘";
+"Disk" = "磁盘";
+"The target offers no disks." = "该目标没有提供磁盘。";
+"read-only" = "只读";
+"Server" = "服务器";
+"In use" = "使用中";
+"Discovered through" = "发现来源";
+"Options" = "选项";
+"Connect automatically" = "自动连接";
+"Attach disks read-only" = "以只读方式挂接磁盘";
+"Verify headers (CRC32C)" = "校验报文头 (CRC32C)";
+"Verify data (CRC32C)" = "校验数据 (CRC32C)";
+"Some options can only be changed while the target is disconnected." = "部分选项只能在目标断开时更改。";
+"Session" = "会话";
+
+/* Volumes */
+"This disk has not been formatted yet." = "此磁盘尚未格式化。";
+"Format…" = "格式化…";
+"Erase…" = "抹掉…";
+"Format" = "格式化";
+"Erase" = "抹掉";
+"Formatting…" = "正在格式化…";
+"Format this disk?" = "要格式化此磁盘吗？";
+"Erase this disk?" = "要抹掉此磁盘吗？";
+"All data on the disk will be deleted, on the server as well. This cannot be undone." = "磁盘上的所有数据（包括服务器上的数据）都将被删除，此操作无法撤销。";
+"Name:" = "名称：";
+"Format:" = "格式：";
+"Mac OS Extended (Journaled)" = "Mac OS 扩展（日志式）";
+"Show in Finder" = "在访达中显示";
+"Mount" = "装载";
+"Unmount" = "卸载";
+"Not mounted" = "未装载";
+
+/* Authentication */
+"Authentication" = "认证";
+"Default" = "默认";
+"None" = "无";
+"CHAP" = "CHAP";
+"User name" = "用户名";
+"Password" = "密码";
+"User name:" = "用户名：";
+"Password:" = "密码：";
+"Saved in keychain" = "已存储在钥匙串中";
+"Required" = "必填";
+"Verify the server as well (mutual CHAP)" = "同时验证服务器（双向 CHAP）";
+"Server user name" = "服务器用户名";
+"Server password" = "服务器密码";
+"Uses the CHAP credentials from Settings, if any." = "使用“设置”中的默认 CHAP 凭据（如已设定）。";
+
+/* Adding targets */
+"Find on Server" = "从服务器查找";
+"Enter Manually" = "手动输入";
+"Find" = "查找";
+"Address" = "地址";
+"Enter the address of the iSCSI server (for instance a NAS) to list its targets." = "输入 iSCSI 服务器（例如 NAS）的地址，以列出它提供的目标。";
+"Asking the server for its targets…" = "正在向服务器查询目标…";
+"The server offers no targets to this Mac." = "该服务器没有向这台 Mac 提供目标。";
+"Already added" = "已添加";
+"Enter the name of the target and the address of the server that provides it." = "输入目标的名称以及提供该目标的服务器地址。";
+"Target name:" = "目标名称：";
+"Server address:" = "服务器地址：";
+"The target requires a user name and password (CHAP)" = "目标需要用户名和密码（CHAP）";
+
+/* Settings */
+"General" = "通用";
+"Discovery" = "发现";
+"This Mac" = "这台 Mac";
+"Initiator name" = "启动器名称";
+"Alias" = "别名";
+"Servers know this Mac by its initiator name, and may grant access to targets by it. The name can only be changed while no target is connected." = "服务器通过启动器名称识别这台 Mac，并可能据此授予目标的访问权限。只有在没有连接任何目标时才能更改该名称。";
+"Daemon" = "守护进程";
+"Status" = "状态";
+"Running (version %@)" = "运行中（版本 %@）";
+"Not running" = "未运行";
+"Start the daemon when I log in" = "登录时启动守护进程";
+"Show in the menu bar" = "在菜单栏中显示";
+"While it is in the menu bar, the application keeps running there when its window is closed, and leaves the Dock. To quit it, click the item in the menu bar and choose Quit." = "在菜单栏中显示时，关闭窗口后应用只保留菜单栏图标继续运行，不再出现在程序坞中。要退出，请点按菜单栏中的图标并选取“退出”。";
+"Log" = "日志";
+"Show Log" = "显示日志";
+"Use CHAP" = "使用 CHAP";
+"Default Credentials" = "默认凭据";
+"These credentials are used for discovery, and for targets that have no credentials of their own." = "这些凭据用于发现，以及没有单独设定凭据的目标。";
+"Look for new targets periodically" = "定期查找新目标";
+"Every" = "间隔";
+"minute" = "1 分钟";
+"5 minutes" = "5 分钟";
+"15 minutes" = "15 分钟";
+"hour" = "1 小时";
+"Targets that a server offers are added automatically, and are removed when the server no longer offers them." = "服务器提供的目标会被自动添加；服务器不再提供的目标会被自动移除。";
+"Servers" = "服务器";
+"Language" = "语言";
+"System Default" = "跟随系统";
+"The language changes when the application is restarted." = "重新启动应用后，语言才会更改。";
+"Restart Now" = "立即重新启动";
+"Restart" = "重新启动";
+"Later" = "稍后";
+"Restart LunLink to change the language?" = "要重新启动 LunLink 以更改语言吗？";
+"Targets stay connected while the application restarts." = "应用重新启动期间，目标会保持连接。";
+
+/* Errors and confirmations */
+"The iSCSI daemon is not running." = "iSCSI 守护进程未运行。";
+"The resource is in use." = "资源正在使用中。";
+"The item exists already." = "该项目已存在。";
+"The name is not a valid IQN or EUI-64 identifier." = "该名称不是有效的 IQN 或 EUI-64 标识符。";
+"The address is not valid." = "地址无效。";
+"The server did not respond in time." = "服务器未在规定时间内响应。";
+"The server refused the connection. Check the address and port, and that the iSCSI service is enabled on the server." = "服务器拒绝了连接。请检查地址和端口，并确认服务器已启用 iSCSI 服务。";
+"The server cannot be reached. Check the address and your network connection." = "无法连接到服务器。请检查地址和网络连接。";
+"If the server is on your local network, make sure that LunLink is allowed under Privacy & Security → Local Network in System Settings." = "如果服务器在本地网络上，请确认已在“系统设置 → 隐私与安全性 → 本地网络”中允许 LunLink。";
+"The server closed the connection during login. It may require CHAP authentication, or may not permit this initiator to access the target." = "服务器在登录过程中关闭了连接。它可能要求 CHAP 认证，或不允许此启动器访问该目标。";
+"The server rejected the login. Check the CHAP user name and password." = "服务器拒绝了登录。请检查 CHAP 用户名和密码。";
+"The server responded: %@" = "服务器返回：%@";
+"Check the CHAP user name and password, and that the server permits this initiator to access the target." = "请检查 CHAP 用户名和密码，并确认服务器允许此启动器访问该目标。";
+"Could not connect to “%@”" = "无法连接到“%@”";
+"Could not disconnect from “%@”" = "无法断开“%@”";
+"Disconnect “%@”?" = "要断开“%@”吗？";
+"The volumes on its disks will be unmounted." = "其磁盘上的卷宗将被卸载。";
+"Disconnect “%@” even if its volumes are in use?" = "即使卷宗正在使用，也要断开“%@”吗？";
+"Data that has not been written yet will be lost." = "尚未写入的数据将会丢失。";
+"A volume of “%@” is in use" = "“%@”上有卷宗正在使用";
+"Quit the applications that use the volume and try again. If you disconnect regardless, data that has not been written yet will be lost." = "请退出正在使用该卷宗的应用程序后重试。如果仍要断开，尚未写入的数据将会丢失。";
+"Could not add the target" = "无法添加目标";
+"Remove “%@”?" = "要移除“%@”吗？";
+"The target and its settings will be removed from this Mac. Data on the target is not affected." = "该目标及其设置将从这台 Mac 移除，目标上的数据不受影响。";
+"Could not remove the target" = "无法移除目标";
+"Disconnect from the target first." = "请先断开该目标。";
+"Could not change the settings" = "无法更改设置";
+"Could not change the setting" = "无法更改设置";
+"Could not query “%@”" = "无法查询“%@”";
+"Could not add the discovery portal" = "无法添加发现服务器";
+"Could not remove the discovery portal" = "无法移除发现服务器";
+"Disconnect from the targets of the portal first." = "请先断开该服务器上的目标。";
+"Could not mount the volume" = "无法装载卷宗";
+"Could not unmount the volume" = "无法卸载卷宗";
+"The volume is in use. Quit the applications that use it and try again." = "卷宗正在使用中。请退出正在使用它的应用程序后重试。";
+"Could not format the disk" = "无法格式化磁盘";
+"The disk is no longer attached." = "该磁盘已不再挂接。";
+"Stop the iSCSI daemon?" = "要停止 iSCSI 守护进程吗？";
+"All targets will be disconnected." = "所有目标都将断开连接。";
+"Disconnect from all targets first: the iSCSI daemon has to be restarted." = "请先断开所有目标：需要重新启动 iSCSI 守护进程。";

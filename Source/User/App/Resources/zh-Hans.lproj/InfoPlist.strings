@@ -1,0 +1,7 @@
+/* What the system shows on behalf of the application (see Info.plist). */
+
+"CFBundleName" = "LunLink";
+"CFBundleDisplayName" = "LunLink";
+"NSHumanReadableCopyright" = "版权所有 © 2026 LunLink 贡献者。部分代码 © 2016–2021 Nareg Sinenian。以 BSD 2-Clause 许可证发布。";
+"NSLocalNetworkUsageDescription" = "LunLink 需要连接本地网络上的 iSCSI 目标。";
+"NSNetworkVolumesUsageDescription" = "LunLink 通过自带守护进程提供的卷宗来挂接 iSCSI 目标的磁盘。";

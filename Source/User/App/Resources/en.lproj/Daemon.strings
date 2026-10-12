@@ -1,0 +1,8 @@
+/* Messages of the daemon as the application words them.  The keys are the
+   messages as the daemon issues them; messages that are absent are shown
+   the way they are. */
+
+"unable to export the logical unit" = "The logical unit could not be made available as a disk.";
+"unable to mount the disk export" = "The disks of the target could not be made available to the system.";
+"unable to attach the logical unit as a disk" = "The logical unit could not be attached as a disk.";
+"the disk was ejected; log out and in again to attach it" = "The disk was ejected. Disconnect and connect again to attach it.";

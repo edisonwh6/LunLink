@@ -1,0 +1,7 @@
+/* What the system shows on behalf of the application (see Info.plist). */
+
+"CFBundleName" = "LunLink";
+"CFBundleDisplayName" = "LunLink";
+"NSHumanReadableCopyright" = "Copyright © 2026 LunLink contributors. Portions © 2016–2021 Nareg Sinenian. BSD 2-Clause License.";
+"NSLocalNetworkUsageDescription" = "LunLink connects to iSCSI targets on your local network.";
+"NSNetworkVolumesUsageDescription" = "LunLink attaches the disks of iSCSI targets by way of a volume that its own daemon provides.";

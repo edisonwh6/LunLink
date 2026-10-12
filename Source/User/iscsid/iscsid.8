@@ -1,0 +1,85 @@
+.\" Manual page of the iSCSI daemon.
+.\" Copyright (c) 2026, LunLink contributors.
+.\" It takes the place of the manual page of the original iSCSI Initiator,
+.\" (c) 2013-2015 Nareg Sinenian.
+.Dd October 12, 2026
+.Dt ISCSID 8
+.Os macOS
+.Sh NAME
+.Nm iscsid
+.Nd iSCSI initiator daemon
+.Sh SYNOPSIS
+.Nm
+.Op Fl d
+.Op Fl v
+.Sh DESCRIPTION
+.Nm
+is the iSCSI initiator.
+It establishes sessions with iSCSI targets, makes the logical units of the
+targets available to the system as disks, and keeps the sessions alive.
+It is controlled by
+.Xr iscsictl 8
+and by the LunLink application, both of which start
+.Nm
+when it is needed.
+.Pp
+.Nm
+runs with the privileges of the user and does not involve a kernel
+extension.
+A logical unit is turned into a disk in three steps: the daemon publishes
+the unit as a file of a small NFS file system that it serves on a local
+socket; that file system is mounted with the NFS client of the system; and
+the file is attached as a raw disk image.
+From there on the system treats the unit like any other disk.
+.Pp
+When the connection of a session is lost,
+.Nm
+suspends I/O to the disks of the session and attempts to re-establish the
+session.
+If that succeeds within two minutes, I/O resumes where it left off.
+Otherwise the disks are detached, and targets that are configured to be
+persistent or to be logged in to automatically are logged in to again once
+they can be reached.
+.Pp
+Upon the signals
+.Dv SIGTERM
+and
+.Dv SIGINT
+.Nm
+unmounts the volumes of all targets (forcibly if need be), logs out and
+exits.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d
+Log debug messages.
+.It Fl v
+Display the version and exit.
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev ISCSI_RUNTIME_DIR
+The directory for run-time files; the log is kept there as well.
+.It Ev ISCSI_PREFERENCES_DOMAIN
+The preferences domain that holds the configuration.
+.It Ev ISCSI_SECRETS_FILE
+A property list file in which to keep CHAP secrets, instead of the keychain.
+.It Ev ISCSI_RECOVERY_TIMEOUT
+The time, in seconds, for which to attempt to recover a session before its
+disks are detached (120 by default).
+.El
+.Sh FILES
+See
+.Xr iscsictl 8 .
+.Sh SEE ALSO
+.Xr iscsictl 8 ,
+.Xr launchd 8 ,
+.Xr mount_nfs 8
+.Sh STANDARDS
+.Nm
+implements the iSCSI protocol (RFC 7143) at error recovery level 0, with a
+single connection per session.
+CHAP authentication uses the MD5 algorithm.
+.Sh AUTHORS
+.An Nareg Sinenian Aq Mt nareg@alum.mit.edu
+and contributors.

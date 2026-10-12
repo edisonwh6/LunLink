@@ -1,0 +1,29 @@
+/* Simplified Chinese for the messages of the daemon and of the client
+   library.  The keys are the messages as they are issued. */
+
+/* Disks (iSCSIDiskManager.c) */
+"unable to export the logical unit" = "无法把该逻辑单元提供为磁盘。";
+"unable to mount the disk export" = "无法向系统提供该目标的磁盘。";
+"unable to attach the logical unit as a disk" = "无法把该逻辑单元挂接为磁盘。";
+"the disk was ejected; log out and in again to attach it" = "该磁盘已被推出。请断开并重新连接目标以再次挂接。";
+
+/* Responses of targets to a login (iSCSIUtils.c) */
+"Login successful" = "登录成功";
+"The target has denied access" = "目标拒绝了访问";
+"Authentication failure" = "认证失败";
+"Can't include the portal in the session" = "无法把该服务器地址加入会话";
+"An initiator error has occurred" = "启动器发生错误";
+"The initiator made an invalid request" = "启动器发出了无效的请求";
+"Missing login parameters" = "缺少登录参数";
+"Target was not found" = "未找到目标";
+"Target is out of resources" = "目标的资源不足";
+"Target services unavailable" = "目标的服务不可用";
+"Session doesn't exist" = "会话不存在";
+"Target doesn't support login" = "目标不支持这种登录";
+"Target software or hardware error has occured" = "目标发生了软件或硬件错误";
+"Target has permanently moved" = "目标已永久迁移";
+"Target has temporarily moved" = "目标已暂时迁移";
+"Target has been removed" = "目标已被移除";
+"The session cannot support additional connections" = "会话无法容纳更多连接";
+"Target is incompatible with the initiator" = "目标与启动器不兼容";
+"Unknown error occurred" = "发生未知错误";

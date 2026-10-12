@@ -1,0 +1,251 @@
+.\" Manual page of the iscsictl command-line utility.
+.\" Copyright (c) 2026, LunLink contributors.
+.\" It takes the place of the manual page of the original iSCSI Initiator,
+.\" (c) 2013-2015 Nareg Sinenian, whose command syntax it describes.
+.Dd October 12, 2026
+.Dt ISCSICTL 8
+.Os macOS
+.Sh NAME
+.Nm iscsictl
+.Nd iSCSI initiator configuration and management tool
+.Sh SYNOPSIS
+.Nm
+.Cm add target
+.Ar target , Ns Ar portal
+.Op Fl interface Ar interface
+.Nm
+.Cm remove target
+.Ar target Ns Op , Ns Ar portal
+.Pp
+.Nm
+.Cm login
+.Ar target Ns Op , Ns Ar portal
+.Nm
+.Cm logout
+.Ar target
+.Op Fl force
+.Pp
+.Nm
+.Cm modify initiator-config
+.Op Ar options
+.Nm
+.Cm modify target-config
+.Ar target Ns Op , Ns Ar portal
+.Op Ar options
+.Nm
+.Cm modify discovery-config
+.Op Ar options
+.Pp
+.Nm
+.Cm list initiator-config
+.Nm
+.Cm list target-config
+.Ar target
+.Nm
+.Cm list discovery-config
+.Pp
+.Nm
+.Cm add discovery-portal
+.Ar portal
+.Op Fl interface Ar interface
+.Nm
+.Cm remove discovery-portal
+.Ar portal
+.Nm
+.Cm discover
+.Ar portal
+.Pp
+.Nm
+.Cm list targets
+.Nm
+.Cm list luns
+.Pp
+.Nm
+.Cm daemon
+.Cm status | start | stop | install | uninstall
+.Sh DESCRIPTION
+The
+.Nm
+utility is used to configure the iSCSI initiator and to manage its sessions.
+Targets are defined along with the portals through which they are reached,
+either by hand or by discovery.
+Logging in to a target attaches its logical units to the system as disks,
+whose volumes are then mounted like those of any other disk.
+.Pp
+All work is carried out by the iSCSI daemon,
+.Xr iscsid 8 ,
+which
+.Nm
+starts if it is not running.
+Neither the daemon nor
+.Nm
+require administrator privileges; the configuration and the sessions are
+those of the user.
+.Pp
+A
+.Ar target
+is named by its iSCSI qualified name (IQN) or EUI-64 identifier.
+A
+.Ar portal
+is an IPv4 address, an IPv6 address or a host name, optionally followed by
+a colon and a TCP port (the default port is 3260).
+An IPv6 address must be enclosed in brackets if a port is specified.
+An
+.Ar interface
+is the name of a network interface (as listed by
+.Xr ifconfig 8 )
+from which to connect; by default the system chooses.
+.Pp
+The commands are as follows:
+.Bl -tag -width Ds
+.It Cm add target
+Defines a target, or adds a portal to a target that is defined already.
+.It Cm remove target
+Removes a target along with its settings, or just one of its portals.
+.It Cm login
+Logs in to a target and attaches its logical units as disks.
+Unless a portal is specified, the portals of the target are tried one after
+another until one of them works.
+.It Cm logout
+Unmounts the volumes of a target, detaches its disks and logs out.
+The command fails if a volume is in use, unless
+.Fl force
+is specified, in which case data that was not yet written is lost.
+.It Cm modify
+Changes the configuration of the initiator, of a target or of discovery;
+see the options below.
+.It Cm list
+Displays the configuration of the initiator, of a target or of discovery,
+the targets with their state, or the logical units of the targets that are
+logged in to along with the names of their disks.
+.It Cm add discovery-portal
+Adds a portal that is queried periodically for the targets that it offers
+(SendTargets discovery).
+Targets that are discovered are added automatically and are removed when
+they are no longer offered, unless they are logged in to.
+.It Cm remove discovery-portal
+Removes a discovery portal along with the targets that it contributed.
+.It Cm discover
+Queries a portal once for the targets that it offers and lists them, without
+recording anything.
+.It Cm daemon
+Displays the state of the daemon, starts or stops it, or installs
+.Pq uninstalls
+a launch agent that starts the daemon when the user logs in, which is when
+targets that are configured for automatic login get connected.
+.El
+.Pp
+The following options can be used to modify initiator-config:
+.Bl -tag -width Ds
+.It Fl node-name Ar initiator_IQN
+The iSCSI qualified name of the initiator.
+Targets may grant access by this name.
+By default a name is derived from the identifier of the host.
+.It Fl node-alias Ar alias
+An alias for the initiator (presented to targets during login).
+.It Fl authentication Ar method
+The method by which the initiator authenticates itself to targets and
+discovery portals: None or CHAP.
+.It Fl CHAP-name Ar name
+The CHAP user name of the initiator.
+.It Fl CHAP-secret
+Sets the CHAP secret of the initiator.
+The secret is prompted for (or read from the standard input if that is not
+a terminal).
+.El
+.Pp
+The following options can be used to modify target-config:
+.Bl -tag -width Ds
+.It Fl auto-login Ar enable | disable
+Whether the daemon logs in to the target when it starts.
+.It Fl persistent Ar enable | disable
+Whether the daemon keeps trying to log in to the target again after its
+session was lost for good.
+.It Fl read-only Ar enable | disable
+Whether the disks of the target are attached read-only.
+.It Fl HeaderDigest Ar digest
+The header digest to ask for: None or CRC32C.
+.It Fl DataDigest Ar digest
+The data digest to ask for: None or CRC32C.
+.It Fl initiator-authentication Ar method
+The method by which the initiator authenticates itself to this target: None,
+CHAP, or default to use what is configured for the initiator in general.
+.It Fl initiator-CHAP-name Ar name
+The CHAP user name that the initiator uses for this target.
+.It Fl initiator-CHAP-secret
+Sets the CHAP secret that the initiator uses for this target.
+.It Fl authentication Ar method
+The method by which the target authenticates itself to the initiator
+(mutual CHAP): None or CHAP.
+This requires that the initiator authenticates itself by CHAP as well.
+.It Fl CHAP-name Ar name
+The CHAP user name by which the target identifies itself.
+.It Fl CHAP-secret
+Sets the CHAP secret of the target.
+.It Fl port Ar port , Fl interface Ar interface
+Change the TCP port or the network interface of the specified portal.
+.El
+.Pp
+The following options can be used to modify discovery-config:
+.Bl -tag -width Ds
+.It Fl SendTargets Ar enable | disable
+Whether discovery portals are queried periodically.
+.It Fl interval Ar seconds
+The time between queries.
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev ISCSI_RUNTIME_DIR
+The directory for run-time files (see
+.Sx FILES ) .
+.It Ev ISCSI_PREFERENCES_DOMAIN
+The preferences domain that holds the configuration.
+.It Ev ISCSI_SECRETS_FILE
+A property list file in which to keep CHAP secrets, instead of the keychain.
+.El
+.Pp
+These variables must have the same values for the daemon and its clients.
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa ~/Library/Preferences/io.github.edisonwh6.LunLink.plist
+The configuration: the name and alias of the initiator, targets with their
+portals and settings, discovery portals.
+.It Pa ~/Library/Application Support/LunLink
+Run-time files: the socket of the daemon and the mount point of the disk
+export.
+.It Pa ~/Library/Logs/LunLink/iscsid.log
+The log of the daemon.
+.El
+.Pp
+CHAP secrets are kept in the login keychain, as generic passwords of the
+service
+.Dq LunLink .
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Find out which targets a server offers, define one of them and log in:
+.Bd -literal -offset indent
+iscsictl discover 192.168.1.100
+iscsictl add target iqn.2015-01.com.example:target,192.168.1.100
+iscsictl login iqn.2015-01.com.example:target
+.Ed
+.Pp
+Set the CHAP credentials for a target and log in to it automatically:
+.Bd -literal -offset indent
+iscsictl modify target-config iqn.2015-01.com.example:target \e
+    -initiator-authentication CHAP -initiator-CHAP-name user \e
+    -initiator-CHAP-secret -auto-login enable
+iscsictl daemon install
+.Ed
+.Pp
+See what was attached, then log out:
+.Bd -literal -offset indent
+iscsictl list luns
+iscsictl logout iqn.2015-01.com.example:target
+.Ed
+.Sh SEE ALSO
+.Xr diskutil 8 ,
+.Xr iscsid 8
+.Sh AUTHORS
+.An Nareg Sinenian Aq Mt nareg@alum.mit.edu
+and contributors.
