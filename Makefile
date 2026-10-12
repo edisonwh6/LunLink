@@ -91,7 +91,9 @@ $(ISCSICTL): $(CTL_DIR)/iscsictl.c $(LIB) $(HEADERS)
 $(LAUNCHER): $(L_DIR)/launcher.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-# The application bundle carries the daemon and the command-line tool
+# The application bundle carries the daemon and the command-line tool.  Its
+# executables are stripped of debugging symbols, which would name the
+# directories of whoever built them.
 app: $(BUILD)/.app-stamp
 
 $(OBJ)/app/AppSupport.o: $(APP_DIR)/AppSupport.c $(APP_DIR)/AppSupport.h $(HEADERS)
@@ -122,6 +124,8 @@ $(BUILD)/.app-stamp: $(APP_SRC) $(APP_DIR)/BridgingHeader.h $(APP_DIR)/Info.plis
 	cp $(BUILD)/AppIcon.icns "$(APP)/Contents/Resources/"
 	cp $(D_DIR)/iscsid.8 $(CTL_DIR)/iscsictl.8 "$(APP)/Contents/Resources/"
 	cp LICENSE.md NOTICE.md "$(APP)/Contents/Resources/"
+	strip -S "$(APP_BIN)" "$(APP)/Contents/MacOS/iscsid" "$(APP)/Contents/MacOS/iscsictl" \
+	    "$(APP)/Contents/Helpers/Launcher.app/Contents/MacOS/launcher" 2>/dev/null
 	codesign --force --sign - --identifier $(BUNDLE_ID).launcher "$(APP)/Contents/Helpers/Launcher.app"
 	codesign --force --sign - --identifier $(BUNDLE_ID) "$(APP)/Contents/MacOS/iscsid"
 	codesign --force --sign - --identifier $(BUNDLE_ID).iscsictl "$(APP)/Contents/MacOS/iscsictl"
